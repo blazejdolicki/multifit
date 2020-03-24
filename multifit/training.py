@@ -575,7 +575,7 @@ class ULMFiT:
     def from_pretrained_(self, name, repo="n-waves/multifit-models"):
         name = name.rstrip(".tgz")  # incase someone put's tgz name the name
         url = f"https://github.com/{repo}/releases/download/{name}/{name}.tgz"
-        path = untar_data(url.rstrip(".tgz"), data=False)  # untar_data adds .tgz
+        path = untar_data(url, data=False)  # untar_data adds .tgz
         return self.load_(path)
 
 
