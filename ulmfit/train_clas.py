@@ -233,9 +233,11 @@ class CLSHyperParams(LMHyperParams):
     def databunches(self, bs, trn_df, val_df, tst_df, unsup_df, add_trn_to_lm=True, use_moses=False, force=False, limit=None, noise=0.0):
         lm_trn_df = pd.concat([unsup_df, val_df, tst_df] + ([trn_df] if add_trn_to_lm else []))
         val_len = max(int(len(lm_trn_df) * 0.1), 2)
+        print(lm_trn_df.shape)
+        print(trn_df.shape)
         lm_trn_df = lm_trn_df[val_len:]
         lm_val_df = lm_trn_df[:val_len]
-
+        
         cls_name="cls"
         if limit is not None:
             print("Limiting data set to:", limit)

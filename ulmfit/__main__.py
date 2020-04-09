@@ -41,10 +41,12 @@ class ULMFiT:
     lm2 = LMHyperParams
     @wraps(CLSHyperParams)
     def cls(self, dataset_path, base_lm_path=None, **changes):
+        print("here")
         if base_lm_path is not None:
             params = CLSHyperParams.from_lm(dataset_path, base_lm_path, **changes)
         else:
             params = CLSHyperParams(dataset_path=dataset_path, **changes)
+        print("here2")
         return FireView(train=params.train_cls, validate_cls=params.validate_cls)
 
     @wraps(CLSHyperParams)
