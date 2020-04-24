@@ -3,10 +3,9 @@ TZ=CET date
 echo ""
 
 # if data wasn't downloaded before
-if [ ! -d "data/110kDBRD" ] ; then
+if [ ! -d "data/cls/nl-books" ] ; then
     echo "Downloading 110kDBRD dataset"
-    DATA_DIR='data/110kDBRD'
-    mkdir ${DATA_DIR}
+    DATA_DIR='data/cls'
     url="https://github.com/benjaminvdb/110kDBRD/releases/download/v2.0/110kDBRD_v2.tgz"
     wget -O ${DATA_DIR}/110kDBRD_v2.tgz ${url}
 
@@ -17,6 +16,10 @@ if [ ! -d "data/110kDBRD" ] ; then
     fi
     echo "Unpacking tgz file"
     tar zxvf ${DATA_DIR}/110kDBRD_v2.tgz -C ${DATA_DIR}
+    mkdir ${DATA_DIR}/nl-books
+    # convert text files in folders into csv
+    python convert_110kDBRD.py
+    rm ${DATA_DIR}/110kDBRD_v2.tgz
 else
     echo "Dataset already exists. Skipping download. "
 fi
