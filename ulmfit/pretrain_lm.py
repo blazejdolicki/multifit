@@ -159,10 +159,10 @@ class LMHyperParams:
         json_save(self.model_dir/'info.json', vals)
         print("Saving info", self.model_dir / 'info.json')
 
-    def train_lm(self, num_epochs=20, data_lm=None, bs=70, true_wd=False, drop_mult=0.0, lr=5e-3, label_smoothing_eps=0.0):
+    def train_lm(self, num_epochs=20, data_lm=None, bs=70, true_wd=False, drop_mult=0.0, lr=5e-3, label_smoothing_eps=0.0, transformer=False):
         self.model_dir.mkdir(exist_ok=True, parents=True)
         data_lm = self.load_wiki_data(bs=bs) if data_lm is None else data_lm
-        learn = self.create_lm_learner(data_lm, drop_mult=drop_mult, label_smoothing_eps=label_smoothing_eps)
+        learn = self.create_lm_learner(data_lm, drop_mult=drop_mult, label_smoothing_eps=label_smoothing_eps, transformer=False)
         print("Bptt", data_lm.bptt)
         learn.true_wd = true_wd
         if num_epochs > 0:
@@ -192,15 +192,25 @@ class LMHyperParams:
         # do we need to return `learn'? it adds noise to Fire output
         #return learn
 
-    def create_lm_learner(self, data_lm, dps=None, label_smoothing_eps=0.0, **kwargs):
+    def create_lm_learner(self, data_lm, dps=None, label_smoothing_eps=0.0, transformer=False, **kwargs):
         assert self.bidir == False, "bidirectional model is not yet supported"
-        config = dict(emb_sz=self.emb_sz, n_hid=self.nh, n_layers=self.nl, pad_token=PAD_TOKEN_ID, qrnn=self.qrnn,
+        print("Transformer",transformer)
+        if transformer:
+            config = dict(n_layers=self.nl, pad_token=PAD_TOKEN_ID, qrnn=self.qrnn,
+                            tie_weights=True, out_bias=True)
+        else:
+            config = dict(emb_sz=self.emb_sz, n_hid=self.nh, n_layers=self.nl, pad_token=PAD_TOKEN_ID, qrnn=self.qrnn,
                           tie_weights=True, out_bias=True)
         config.update(dps or self.dps)
         trn_args = dict(clip=self.clip, alpha=self.rnn_alpha, beta=self.rnn_beta)
         trn_args.update(kwargs)
         print ("Training args: ", trn_args, "dps: ", dps or self.dps)
-        learn = language_model_learner(data_lm, AWD_LSTM, config=config, model_dir=self.model_dir.relative_to(data_lm.path), pretrained=False, **trn_args)
+        
+        if transformer:
+            learn = language_model_learner(data_lm, TransformerXL, config=None, model_dir=self.model_dir.relative_to(data_lm.path), pretrained=False, **trn_args)
+        else:
+            learn = language_model_learner(data_lm, AWD_LSTM, config=config, model_dir=self.model_dir.relative_to(data_lm.path), pretrained=False, **trn_args)
+
         if self.pretrained_model is not None:
             print("Loading pretrained model")
             model_path = untar_data(self.pretrained_model, data=False)

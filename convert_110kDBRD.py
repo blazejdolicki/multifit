@@ -24,6 +24,6 @@ for part in ['unsup','test','train']:
 
     revs_df = pd.DataFrame.from_dict(revs_dict)
     # shuffle the data
-    revs_df = revs_df.sample(frac=1).reset_index(drop=True)   
+    revs_df = revs_df.sample(frac=1,random_state=7).reset_index(drop=True)   
     # save to csv 
     revs_df.to_csv(f"{NEW_DIR}/nl.{part}.csv", header=None,index=False)

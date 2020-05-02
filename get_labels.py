@@ -4,10 +4,9 @@ from shutil import copyfile
 
 SOURCE_DIR = "../LASER/tasks/cls"
 
-# TODO add Dutch
 # CLS languages
-# langs = ["de","fr","ja"]
-langs = ["de"]
+langs = ["de","fr","ja","nl"]
+# langs = ["de"]
 for lang in langs:
     DATA_DIR = f"data/cls/{lang}-books"
     TARGET_DIR = f"{DATA_DIR}-laser"
@@ -29,7 +28,7 @@ for lang in langs:
 
     # read ground truth, skip the summary column
     ground_truth = pd.read_csv(f"{DATA_DIR}/{lang}.train.csv",header=None,usecols=[0,2])
-    
+    print(lang)
     ground_truth.columns = ["actuals","text"]
     assert (ground_truth["actuals"]==merged["actuals"]).all(), "Ground truth is not the same, probably order of predictions is different"
     
