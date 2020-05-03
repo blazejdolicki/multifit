@@ -5,7 +5,7 @@ Optionally fine-tune LM before.
 
 import fire
 
-from fastai.callbacks import CSVLogger
+from fastai.callbacks import CSVLogger, SaveModelCallback
 from fastai.text import *
 from fastai_contrib.utils import PAD_TOKEN_ID
 from ulmfit.pretrain_lm import LMHyperParams, ENC_BEST
@@ -88,7 +88,9 @@ class CLSHyperParams(LMHyperParams):
         else:
             print("Starting classifier from random weights")
 
-
+        # print(learn)
+        # print(learn.summary())
+        
         if hasattr(self, 'lr_schedule_'+lr_sched):
             learn.true_wd = True
             getattr(self, 'lr_schedule_'+lr_sched)(learn, num_cls_epochs)
@@ -159,6 +161,7 @@ class CLSHyperParams(LMHyperParams):
         assert self.bidir == False, "bidirectional model is not yet supported"
         config = dict(emb_sz=self.emb_sz, n_hid=self.nh, n_layers=self.nl, pad_token=PAD_TOKEN_ID, qrnn=self.qrnn)
         config.update(dps or self.dps)
+        # print(config)
         trn_args=dict(bptt=self.bptt, clip=self.clip)
         trn_args.update(kwargs)
         learn = text_classifier_learner(data_clas, AWD_LSTM, config=config,
@@ -172,7 +175,7 @@ class CLSHyperParams(LMHyperParams):
             learn.freeze()
 
         learn.callback_fns += [partial(CSVLogger, filename=f"{learn.model_dir}/cls-history"),
-                               #partial(SaveModelCallback, every='improvement', name='cls_best') disabled due to memory issues
+                            #    partial(SaveModelCallback, every='improvement', name='cls_best') # disabled due to memory issues
                                ]
         if label_smoothing_eps > 0.0:
             learn.loss_func = FlattenedLoss(LabelSmoothingCrossEntropy, eps=label_smoothing_eps)
