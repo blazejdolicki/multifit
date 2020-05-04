@@ -150,6 +150,15 @@ class LMHyperParams:
                 f"self.tokenizer has wrong value {self.tokenizer}, Allowed values are taken from {Tokenizers}")
         return args
 
+    
+    def set_seed(self, seed, name):
+        if seed is not None:
+            print(f"Setting seed to {seed}")
+            torch.manual_seed(seed)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            np.random.seed(seed)
+
     def save_info(self):
         from dataclasses import asdict
         vals = {k: (str(v) if isinstance(v, Path) else v) for k,v in asdict(self).items()}

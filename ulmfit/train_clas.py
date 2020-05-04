@@ -10,16 +10,31 @@ from fastai.text import *
 from fastai_contrib.utils import PAD_TOKEN_ID
 from ulmfit.pretrain_lm import LMHyperParams, ENC_BEST
 
-
+@dataclass
 class CLSHyperParams(LMHyperParams):
     # dir_path -> data/imdb/
-    use_test_for_validation=False
+    use_test_for_validation:bool =False
+    ftseed:int = None
+    clsweightseed: int = None
+    clstrainseed: int = None
 
     bicls_head:str = 'BiPoolingLinearClassifier'
 
     def __post_init__(self, *args, **kwargs):
         super().__post_init__(*args, **kwargs)
         self.dataset_dir=self.dataset_path
+
+    @property
+    def model_suffix(self):
+        s1 = '' if self.lmseed is None else f'lmseed-{self.lmseed}'
+        s2 = '' if self.ftseed is None else f'ftseed-{self.ftseed}'
+        s3 = '' if self.clsweightseed is None else f'clsweightseed-{self.clsweightseed}'
+        s4 = '' if self.clstrainseed is None else f'clstrainseed-{self.clstrainseed}'
+        s = '-'.join([x for x in [s1, s2, s3, s4] if x != ''])
+        if s != '':
+            return '_'+s
+        return ''
+
 
     @property
     def need_fine_tune_lm(self): return not (self.model_dir/f"enc_best.pth").exists()
@@ -80,13 +95,16 @@ class CLSHyperParams(LMHyperParams):
         learn = self.create_cls_learner(data_clas, drop_mult=drop_mul_cls, max_len=cls_max_len,
                                         label_smoothing_eps=label_smoothing_eps, random_init=random_init)
         if not random_init:
-            try:
-                learn.load('cls_best')
-                print("Loading last classifier")
-            except FileNotFoundError:
-                learn.load_encoder(ENC_BEST)
+            # try:
+            #     learn.load('cls_best')
+            #     print("Loading last classifier")
+            # except FileNotFoundError:
+            learn.load_encoder(ENC_BEST)
         else:
             print("Starting classifier from random weights")
+
+
+        self.set_seed(self.clstrainseed, "classifier train")
 
         # print(learn)
         # print(learn.summary())
@@ -99,8 +117,9 @@ class CLSHyperParams(LMHyperParams):
 
         print(f"Saving models at {learn.path / learn.model_dir}")
         learn.save('cls_last', with_opt=False)
-        learn.save('cls_best', with_opt=False) # we don't use early stopping for the time being
+        # learn.save('cls_best', with_opt=False) # we don't use early stopping for the time being
         del learn
+        self.validate_cls('cls_last', bs=bs, data_cls=data_clas, data_tst=data_tst, learn=None)
         return self.validate_cls('cls_best', bs=bs, data_cls=data_clas, data_tst=data_tst, learn=None)
 
     def validate_cls(self, save_name='cls_best', bs=40, data_cls=None, data_tst=None, learn=None, label_smoothing_eps=0.0):
@@ -175,10 +194,13 @@ class CLSHyperParams(LMHyperParams):
             learn.freeze()
 
         learn.callback_fns += [partial(CSVLogger, filename=f"{learn.model_dir}/cls-history"),
-                            #    partial(SaveModelCallback, every='improvement', name='cls_best') # disabled due to memory issues
+                               partial(SaveModelCallback, every='improvement', name='cls_best') # disabled due to memory issues
                                ]
         if label_smoothing_eps > 0.0:
             learn.loss_func = FlattenedLoss(LabelSmoothingCrossEntropy, eps=label_smoothing_eps)
+        
+        self.set_seed(self.clsweightseed, "classifier weights")
+
         return learn
 
     def load_cls_data(self, bs, **kwargs):
