@@ -123,7 +123,7 @@ class ULMFiT:
             print(i, name, "cls:", (name/"cls_best.pth").exists())
 
     def eval(self, glob="mldoc/*-1/models/sp30k/lstm_nl4.m", dataset_template='${ds_name}', name=None,
-             num_lm_epochs=0, cuda_id=0, train=True, to_csv=None, return_df=False, label_smoothing_eps=0.0,
+             num_lm_epochs=0, cuda_id=0, train=True, to_csv=None, return_df=False, label_smoothing_eps=0.0, overwrite_clas=False, save_best=False,
              **trn_params):
         results = []
 
@@ -146,18 +146,25 @@ class ULMFiT:
                         _name = base_model.name.replace(".m","").replace("lstm_","").replace("qrnn_","")
                     params = CLSHyperParams.from_lm(dataset_path, base_model, lang=lang, name=_name, cuda_id=cuda_id)
                     key = str(params.model_dir.relative_to(Path.cwd()))
-                    if (params.model_dir / "results.npy").exists():
-                        d = np.load(params.model_dir / "results.npy")
-                        d = d.tolist() # magiacally convert to dict
-                    elif (params.model_dir/"cls_best.pth").exists():
-                        print("Evaluating previously trained model")
-                        d = params.validate_cls(label_smoothing_eps=label_smoothing_eps)
-                    elif train:
+
+                    print("Overwrite classifier?", overwrite_clas)
+                    if overwrite_clas:
                         print("Training")
-                        d = params.train_cls(num_lm_epochs=num_lm_epochs, label_smoothing_eps=label_smoothing_eps, **trn_params)
+                        d = params.train_cls(num_lm_epochs=num_lm_epochs, label_smoothing_eps=label_smoothing_eps, overwrite_clas=overwrite_clas, save_best=save_best, **trn_params)
                     else:
-                        print("Skipping", (params.model_dir/"cls_best.pth"))
-                        d  = None
+                        if (params.model_dir / "results.npy").exists():
+                            d = np.load(params.model_dir / "results.npy")
+                            d = d.tolist() # magiacally convert to dict
+                        elif (params.model_dir/"cls_best.pth").exists():
+                            print("Evaluating previously trained model")
+                            d = params.validate_cls(label_smoothing_eps=label_smoothing_eps)
+                        elif train:
+                            print("Training")
+                            d = params.train_cls(num_lm_epochs=num_lm_epochs, label_smoothing_eps=label_smoothing_eps, **trn_params)
+                        else:
+                            print("Skipping", (params.model_dir/"cls_best.pth"))
+                            d  = None
+
                     if d is not None:
                         d['name']=key
                         np.save(params.model_dir / "results.npy", d)

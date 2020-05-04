@@ -63,7 +63,7 @@ class CLSHyperParams(LMHyperParams):
 
     def train_cls(self, num_lm_epochs, unfreeze=True, num_cls_frozen_epochs=1, bs=40, drop_mul_lm=0.3, drop_mul_cls=0.5,
                   use_test_for_validation=False, num_cls_epochs=2, limit=None, noise=0.0, cls_max_len=20*70, lr_sched='layered',
-                  label_smoothing_eps=0.0, random_init=False):
+                  label_smoothing_eps=0.0, random_init=False, overwrite_clas=None,  save_best=False):
         assert use_test_for_validation == False, "use_test_for_validation=True is not supported"
         self.model_dir.mkdir(exist_ok=True, parents=True)
 
@@ -78,12 +78,15 @@ class CLSHyperParams(LMHyperParams):
             else:
                 print("Language model already exist, skipping finetuning")
         learn = self.create_cls_learner(data_clas, drop_mult=drop_mul_cls, max_len=cls_max_len,
-                                        label_smoothing_eps=label_smoothing_eps, random_init=random_init)
+                                        label_smoothing_eps=label_smoothing_eps, random_init=random_init, save_best=save_best)
         if not random_init:
-            try:
-                learn.load('cls_best')
-                print("Loading last classifier")
-            except FileNotFoundError:
+            if not overwrite_clas:
+                try:
+                    learn.load('cls_best')
+                    print("Loading last classifier")
+                except FileNotFoundError:
+                    learn.load_encoder(ENC_BEST)
+            else:
                 learn.load_encoder(ENC_BEST)
         else:
             print("Starting classifier from random weights")
@@ -98,8 +101,14 @@ class CLSHyperParams(LMHyperParams):
             raise ValueError(f"Wrong lr_sched: {lr_sched}")
 
         print(f"Saving models at {learn.path / learn.model_dir}")
-        learn.save('cls_last', with_opt=False)
+        '''
+            1. The name is cls_best, however if save_best is False then the saved model is not from the best epoch, but from the last.
+            2. SaveModelCallback has an on_train_end method which seems to load the saved model after training ends, so even when
+            we save the model at the end like below, it still saves the model from the best epoch (if save_best is True).
+        '''
+
         learn.save('cls_best', with_opt=False) # we don't use early stopping for the time being
+        
         del learn
         return self.validate_cls('cls_best', bs=bs, data_cls=data_clas, data_tst=data_tst, learn=None)
 
@@ -157,7 +166,7 @@ class CLSHyperParams(LMHyperParams):
         shutil.copy(self.dataset_path / f"{self.lang}.test.csv", dest_folder)
         shutil.copy(self.dataset_path / f"{self.lang}.unsup.csv", dest_folder)
 
-    def create_cls_learner(self, data_clas, dps=None, label_smoothing_eps=0.0, random_init=False, **kwargs):
+    def create_cls_learner(self, data_clas, dps=None, label_smoothing_eps=0.0, random_init=False, save_best=False, **kwargs):
         assert self.bidir == False, "bidirectional model is not yet supported"
         config = dict(emb_sz=self.emb_sz, n_hid=self.nh, n_layers=self.nl, pad_token=PAD_TOKEN_ID, qrnn=self.qrnn)
         config.update(dps or self.dps)
@@ -174,9 +183,11 @@ class CLSHyperParams(LMHyperParams):
             learn.load_pretrained(*fnames, strict=False)
             learn.freeze()
 
-        learn.callback_fns += [partial(CSVLogger, filename=f"{learn.model_dir}/cls-history"),
-                            #    partial(SaveModelCallback, every='improvement', name='cls_best') # disabled due to memory issues
-                               ]
+        learn.callback_fns += [partial(CSVLogger, filename=f"{learn.model_dir}/cls-history")]
+        print("Save model from the best epoch?", save_best)
+        if save_best:
+            learn.callback_fns += [partial(SaveModelCallback, every='improvement', name='cls_best')]
+
         if label_smoothing_eps > 0.0:
             learn.loss_func = FlattenedLoss(LabelSmoothingCrossEntropy, eps=label_smoothing_eps)
         return learn

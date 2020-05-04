@@ -275,11 +275,9 @@ class LMHyperParams:
             else:
                 bunch_path.unlink()
 
-        print("bunch_path",bunch_path)
         if (bunch_path / 'itos.pkl').exists():
             data = bunch_class.load(self.cache_dir, name, bs=bs)
         elif bunch_path.exists():
-            print("bunch path exists")
             data = load_data(self.cache_dir, file=name, bs=bs)
         else:
             print(f"Running tokenization {name}...")
