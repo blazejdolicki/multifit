@@ -4,6 +4,7 @@ This is a fork of the original Multifit [repository](https://github.com/n-waves/
 ## Reproducing the results
 ### Initial steps
 1. Clone the repository.
+
 `>> git clone https://github.com/blazejdolicki/multifit`
 
 2. Create a new conda environment and activate it after creation.
