@@ -205,7 +205,7 @@ class CLSHyperParams(LMHyperParams):
         if 'mldoc' in str(self.dataset_dir):
             add_trn_to_lm = False  # False as trn_df is contained in unsup already
             lang = self.lang
-
+        print("Data dir",self.dataset_dir)
         data = self.load_data(lang=lang,
                               add_trn_to_lm=add_trn_to_lm,
                               use_moses=use_moses,
@@ -224,7 +224,7 @@ class CLSHyperParams(LMHyperParams):
             val_df = None
         unsup_fn = self.dataset_path / f'{prefix}unsup.csv'
         unsup_df = pd.read_csv(unsup_fn, header=None) if unsup_fn.exists() else trn_df[:0]
-
+        print("dataset path",self.dataset_path)
         if val_df is None:
             print("Validation set not found using 10% of trn")
             val_len = max(int(len(trn_df) * 0.1), 2)

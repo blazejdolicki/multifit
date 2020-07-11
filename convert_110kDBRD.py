@@ -10,9 +10,12 @@ for part in ['unsup','test','train']:
         for txt in os.listdir(TEXT_DIR)[:1000]:
             with open(f"{TEXT_DIR}/{txt}","r") as f:
                 text = f.read()
-                # use -1 to indicate no label
-                revs_dict["labels"].append(-1)
-                revs_dict["text"].append(text)
+                if text != "NULL":
+                    # use -1 to indicate no label
+                    revs_dict["labels"].append(-1)
+                    revs_dict["text"].append(text)
+                else:
+                    print("Weird missing value")
     else:
         for i, label in enumerate(['neg','pos']):
             TEXT_DIR = f"{DATA_DIR}/{part}/{label}"
@@ -24,6 +27,8 @@ for part in ['unsup','test','train']:
 
     revs_df = pd.DataFrame.from_dict(revs_dict)
     # shuffle the data
-    revs_df = revs_df.sample(frac=1,random_state=7).reset_index(drop=True)   
+    revs_df = revs_df.sample(frac=1,random_state=7).reset_index(drop=True)  
+    
+    print(revs_df.count())
     # save to csv 
     revs_df.to_csv(f"{NEW_DIR}/nl.{part}.csv", header=None,index=False)

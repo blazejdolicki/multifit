@@ -141,6 +141,7 @@ class ULMFiT:
             print("Processing", base_model)
             for lang, dataset_path in sorted(get_dataset_path(base_model, dataset_template)):
                 try:
+                    print(dataset_path)
                     _name = name
                     if name is None:
                         _name = base_model.name.replace(".m","").replace("lstm_","").replace("qrnn_","")
